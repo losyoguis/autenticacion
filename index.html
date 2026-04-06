@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autenticación | GitHub Pages + SQLite</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: rgba(15, 23, 42, 0.72);
+      --panel-2: rgba(30, 41, 59, 0.9);
+      --line: rgba(148, 163, 184, 0.25);
+      --txt: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-2: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--txt);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.18), transparent 30%),
+        linear-gradient(135deg, #020617, #0f172a 45%, #111827);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-left, .hero-right {
+      padding: 28px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      background: rgba(56, 189, 248, 0.08);
+      border-radius: 999px;
+      color: #bae6fd;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 4vw, 3.1rem);
+      line-height: 1.05;
+    }
+
+    p.lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .mini {
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--line);
+    }
+
+    .mini strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .mini span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn,
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .tab-btn {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--txt);
+      border: 1px solid transparent;
+      flex: 1;
+    }
+
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #bae6fd;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      color: white;
+      width: 100%;
+    }
+
+    .btn:hover,
+    .tab-btn:hover,
+    .ghost:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    .ghost {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--txt);
+      width: auto;
+      border: 1px solid var(--line);
+    }
+
+    .danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      font-size: 14px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.78);
+      border-radius: 12px;
+      color: var(--txt);
+      padding: 14px 14px;
+      outline: none;
+      font-size: 15px;
+    }
+
+    input:focus {
+      border-color: rgba(56, 189, 248, 0.55);
+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      display: none;
+      font-size: 14px;
+      line-height: 1.5;
+      border: 1px solid transparent;
+    }
+
+    .status.show { display: block; }
+    .status.ok {
+      background: rgba(34, 197, 94, 0.12);
+      color: #bbf7d0;
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+    .status.err {
+      background: rgba(239, 68, 68, 0.12);
+      color: #fecaca;
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    .status.warn {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fde68a;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    .panel {
+      margin-top: 24px;
+      padding: 24px;
+    }
+
+    .hidden { display: none !important; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .box {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+    }
+
+    .box h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.05rem;
+    }
+
+    .info-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .info-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--line);
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      color: #bae6fd;
+      word-break: break-word;
+    }
+
+    footer {
+      margin-top: 28px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 920px) {
+      .hero,
+      .dashboard,
+      .mini-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <article class="card hero-left">
+        <div class="badge">🔐 Autenticación segura con GitHub Pages + API externa</div>
+        <h1>Frontend estático en <span style="color:#7dd3fc;">GitHub Pages</span> y usuarios en <span style="color:#86efac;">SQLite</span></h1>
+        <p class="lead">
+          Esta interfaz funciona como cliente web. La base de datos SQLite y la autenticación viven en un backend externo
+          porque GitHub Pages solo sirve archivos estáticos.
+        </p>
+
+        <div class="mini-grid">
+          <div class="mini">
+            <strong>Registro</strong>
+            <span>Crea usuarios con nombre, correo y contraseña cifrada.</span>
+          </div>
+          <div class="mini">
+            <strong>Inicio de sesión</strong>
+            <span>Usa JWT para mantener la sesión del usuario.</span>
+          </div>
+          <div class="mini">
+            <strong>Perfil protegido</strong>
+            <span>Consulta datos del usuario autenticado desde la API.</span>
+          </div>
+        </div>
+      </article>
+
+      <aside class="card hero-right">
+        <div class="tabs">
+          <button class="tab-btn active" id="showLoginBtn" type="button">Iniciar sesión</button>
+          <button class="tab-btn" id="showRegisterBtn" type="button">Registrarse</button>
+        </div>
+
+        <div id="authForms">
+          <form id="loginForm">
+            <div class="field">
+              <label for="loginEmail">Correo</label>
+              <input id="loginEmail" name="email" type="email" placeholder="usuario@correo.com" required />
+            </div>
+            <div class="field">
+              <label for="loginPassword">Contraseña</label>
+              <input id="loginPassword" name="password" type="password" placeholder="********" required />
+            </div>
+            <button class="btn" type="submit">Entrar</button>
+          </form>
+
+          <form id="registerForm" class="hidden">
+            <div class="field">
+              <label for="registerName">Nombre</label>
+              <input id="registerName" name="name" type="text" placeholder="Tu nombre" required />
+            </div>
+            <div class="field">
+              <label for="registerEmail">Correo</label>
+              <input id="registerEmail" name="email" type="email" placeholder="usuario@correo.com" required />
+            </div>
+            <div class="field">
+              <label for="registerPassword">Contraseña</label>
+              <input id="registerPassword" name="password" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required />
+            </div>
+            <button class="btn" type="submit">Crear cuenta</button>
+          </form>
+        </div>
+
+        <div class="field" style="margin-top:18px;">
+          <label for="apiBase">URL del backend</label>
+          <input id="apiBase" type="url" placeholder="https://tu-backend.onrender.com" />
+          <div class="hint">Cuando publiques tu API, pega aquí la URL y se guardará en este navegador.</div>
+        </div>
+
+        <div id="statusBox" class="status"></div>
+      </aside>
+    </section>
+
+    <section id="dashboardPanel" class="card panel hidden">
+      <h2 style="margin-top:0;">Panel del usuario</h2>
+      <p class="lead" style="margin-bottom:0;">La sesión ya está activa. Aquí puedes validar que la autenticación y la API estén funcionando.</p>
+
+      <div class="dashboard">
+        <div class="box">
+          <h3>Datos del usuario autenticado</h3>
+          <div class="info-list">
+            <div class="info-item"><strong>ID:</strong> <span id="userId">-</span></div>
+            <div class="info-item"><strong>Nombre:</strong> <span id="userName">-</span></div>
+            <div class="info-item"><strong>Correo:</strong> <span id="userEmail">-</span></div>
+            <div class="info-item"><strong>Creado:</strong> <span id="userCreated">-</span></div>
+          </div>
+        </div>
+
+        <div class="box">
+          <h3>Token almacenado</h3>
+          <p class="hint">Este token se guarda en <span class="code">localStorage</span> solo como demostración. Para una app más sensible, conviene usar cookies seguras desde el backend.</p>
+          <div class="info-item code" id="tokenPreview">No disponible</div>
+          <div class="top-actions">
+            <button class="ghost btn" id="refreshProfileBtn" type="button">Actualizar perfil</button>
+            <button class="danger btn" id="logoutBtn" type="button">Cerrar sesión</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Proyecto base de autenticación compatible con GitHub Pages en el frontend y SQLite en backend externo.
+    </footer>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = {
+      token: 'demo_auth_token',
+      apiBase: 'demo_api_base'
+    };
+
+    const els = {
+      loginForm: document.getElementById('loginForm'),
+      registerForm: document.getElementById('registerForm'),
+      showLoginBtn: document.getElementById('showLoginBtn'),
+      showRegisterBtn: document.getElementById('showRegisterBtn'),
+      statusBox: document.getElementById('statusBox'),
+      dashboardPanel: document.getElementById('dashboardPanel'),
+      authForms: document.getElementById('authForms'),
+      apiBase: document.getElementById('apiBase'),
+      logoutBtn: document.getElementById('logoutBtn'),
+      refreshProfileBtn: document.getElementById('refreshProfileBtn'),
+      userId: document.getElementById('userId'),
+      userName: document.getElementById('userName'),
+      userEmail: document.getElementById('userEmail'),
+      userCreated: document.getElementById('userCreated'),
+      tokenPreview: document.getElementById('tokenPreview')
+    };
+
+    function getApiBase() {
+      return (els.apiBase.value || localStorage.getItem(STORAGE_KEYS.apiBase) || 'http://localhost:3000').trim().replace(/\/$/, '');
+    }
+
+    function saveApiBase() {
+      localStorage.setItem(STORAGE_KEYS.apiBase, els.apiBase.value.trim());
+    }
+
+    function getToken() {
+      return localStorage.getItem(STORAGE_KEYS.token);
+    }
+
+    function setToken(token) {
+      localStorage.setItem(STORAGE_KEYS.token, token);
+      updateTokenPreview();
+    }
+
+    function clearToken() {
+      localStorage.removeItem(STORAGE_KEYS.token);
+      updateTokenPreview();
+    }
+
+    function updateTokenPreview() {
+      const token = getToken();
+      els.tokenPreview.textContent = token ? token.slice(0, 80) + (token.length > 80 ? '...' : '') : 'No disponible';
+    }
+
+    function showMessage(message, type = 'ok') {
+      els.statusBox.textContent = message;
+      els.statusBox.className = `status show ${type}`;
+    }
+
+    function showLogin() {
+      els.loginForm.classList.remove('hidden');
+      els.registerForm.classList.add('hidden');
+      els.showLoginBtn.classList.add('active');
+      els.showRegisterBtn.classList.remove('active');
+    }
+
+    function showRegister() {
+      els.registerForm.classList.remove('hidden');
+      els.loginForm.classList.add('hidden');
+      els.showRegisterBtn.classList.add('active');
+      els.showLoginBtn.classList.remove('active');
+    }
+
+    function setAuthenticatedUI(isAuth) {
+      els.dashboardPanel.classList.toggle('hidden', !isAuth);
+    }
+
+    async function apiFetch(path, options = {}) {
+      const base = getApiBase();
+      const token = getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      };
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${base}${path}`, {
+        ...options,
+        headers
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = { message: 'La respuesta del servidor no fue JSON válido.' };
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Ocurrió un error en la solicitud.');
+      }
+
+      return data;
+    }
+
+    async function loadProfile() {
+      const token = getToken();
+      if (!token) {
+        setAuthenticatedUI(false);
+        return;
+      }
+
+      try {
+        const data = await apiFetch('/api/me');
+        const user = data.user;
+        els.userId.textContent = user.id;
+        els.userName.textContent = user.name;
+        els.userEmail.textContent = user.email;
+        els.userCreated.textContent = user.created_at;
+        setAuthenticatedUI(true);
+        showMessage('Sesión activa. Perfil cargado correctamente.', 'ok');
+      } catch (error) {
+        clearToken();
+        setAuthenticatedUI(false);
+        showMessage(error.message || 'No se pudo cargar el perfil.', 'err');
+      }
+    }
+
+    els.showLoginBtn.addEventListener('click', showLogin);
+    els.showRegisterBtn.addEventListener('click', showRegister);
+    els.apiBase.addEventListener('change', saveApiBase);
+    els.refreshProfileBtn.addEventListener('click', loadProfile);
+
+    els.logoutBtn.addEventListener('click', () => {
+      clearToken();
+      setAuthenticatedUI(false);
+      showMessage('Sesión cerrada correctamente.', 'warn');
+    });
+
+    els.registerForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      saveApiBase();
+      const formData = new FormData(els.registerForm);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const data = await apiFetch('/api/register', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        showMessage(data.message || 'Usuario registrado correctamente. Ahora puedes iniciar sesión.', 'ok');
+        els.registerForm.reset();
+        showLogin();
+      } catch (error) {
+        showMessage(error.message || 'No se pudo registrar el usuario.', 'err');
+      }
+    });
+
+    els.loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      saveApiBase();
+      const formData = new FormData(els.loginForm);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const data = await apiFetch('/api/login', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        setToken(data.token);
+        showMessage('Inicio de sesión correcto.', 'ok');
+        els.loginForm.reset();
+        await loadProfile();
+      } catch (error) {
+        showMessage(error.message || 'No se pudo iniciar sesión.', 'err');
+      }
+    });
+
+    (function init() {
+      const savedBase = localStorage.getItem(STORAGE_KEYS.apiBase);
+      if (savedBase) els.apiBase.value = savedBase;
+      updateTokenPreview();
+      loadProfile();
+    })();
+  </script>
+</body>
+</html>
